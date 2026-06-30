@@ -23,7 +23,7 @@ export const entities: Entity[] = [
     levelIds: ['ww-grizz-1', 'ww-grizz-2'],
     twist: 'timer',
     artifactId: 'time-slowing-crystal',
-    companionId: 'grizz',
+    // Grizz is the starter companion (GAME_DESIGN.md §8), not a boss reward here.
     dialogueId: 'grizz-intro',
   },
 ];
@@ -34,7 +34,8 @@ export const levels: Level[] = [
     entityId: 'grizz-goblin',
     isBoss: true,
     twist: 'timer',
-    words: ['ROOT', 'MOSS', 'TOME', 'STORM', 'MOTOR'],
+    // Gentle first trial: a single 4-letter pool (R,O,O,T) with short sub-words.
+    words: ['ROOT', 'ROT', 'TOO'],
   },
   { id: 'ww-grizz-1', entityId: 'grizz-goblin', isBoss: false, words: ['LEAF', 'FERN', 'FEAR'] },
   { id: 'ww-grizz-2', entityId: 'grizz-goblin', isBoss: false, words: ['VINE', 'NEVI', 'VEIN'] },

@@ -3,12 +3,13 @@ import React from 'react';
 import { StyleSheet, useWindowDimensions, View } from 'react-native';
 
 import type { RootStackParamList } from '../app/navigation';
-import { getLevel } from '../content';
+import { getCompanion, getLevel } from '../content';
 import { puzzleConfig } from '../features/puzzle/config';
 import { GridView } from '../features/puzzle/components/GridView';
 import { LetterWheel } from '../features/puzzle/components/LetterWheel';
 import { deriveWheel } from '../features/puzzle/engine/wheel';
 import { generateLayout } from '../features/puzzle/engine/layout';
+import { pickHintCells } from '../features/puzzle/engine/hints';
 import { classifyGuess } from '../features/puzzle/engine/wheel';
 import { normalizeWord } from '../features/puzzle/engine/wordGrid';
 import { useGameStore } from '../store/useGameStore';
@@ -25,9 +26,14 @@ export function PuzzleScreen({ navigation, route }: Props) {
 
   const foundWords = useGameStore((s) => s.foundWords);
   const timeRemaining = useGameStore((s) => s.timeRemaining);
+  const hintCells = useGameStore((s) => s.hintCells);
+  const boostsUsed = useGameStore((s) => s.boostsUsed);
+  const activeCompanionIds = useGameStore((s) => s.activeCompanionIds);
   const startPuzzle = useGameStore((s) => s.startPuzzle);
   const addFoundWord = useGameStore((s) => s.addFoundWord);
   const setTimeRemaining = useGameStore((s) => s.setTimeRemaining);
+  const revealHintCells = useGameStore((s) => s.revealHintCells);
+  const useBoost = useGameStore((s) => s.useBoost);
   const endPuzzle = useGameStore((s) => s.endPuzzle);
   const hasArtifact = useGameStore((s) => s.hasArtifact);
 
@@ -73,6 +79,51 @@ export function PuzzleScreen({ navigation, route }: Props) {
     setTimeout(() => setFlash(null), 900);
   }, []);
 
+  // The first active companion that can offer a boost (GAME_DESIGN.md §8).
+  const boostCompanion = React.useMemo(() => {
+    for (const id of activeCompanionIds) {
+      const c = getCompanion(id);
+      if (c) return c;
+    }
+    return undefined;
+  }, [activeCompanionIds]);
+
+  const boostAvailable =
+    !!boostCompanion &&
+    boostsUsed < puzzleConfig.companion.boostsPerPuzzle &&
+    !allFound &&
+    !timeUp;
+
+  const onBoost = React.useCallback(() => {
+    if (!level || !layout || !boostCompanion || !boostAvailable) return;
+    const help = boostCompanion.help;
+    if (help.kind === 'revealLetters') {
+      const keys = pickHintCells(layout, foundWords, hintCells, help.amount ?? 1);
+      if (keys.length === 0) return;
+      revealHintCells(keys);
+    } else if (help.kind === 'addTime') {
+      if (timeRemaining === null) return;
+      setTimeRemaining(timeRemaining + (help.amount ?? 10));
+    } else {
+      return; // miniGame not implemented yet
+    }
+    useBoost();
+    const bark = boostCompanion.barks[Math.floor(Math.random() * boostCompanion.barks.length)];
+    if (bark) showFlash(bark, 'good');
+  }, [
+    level,
+    layout,
+    boostCompanion,
+    boostAvailable,
+    foundWords,
+    hintCells,
+    timeRemaining,
+    revealHintCells,
+    setTimeRemaining,
+    useBoost,
+    showFlash,
+  ]);
+
   const onWord = React.useCallback(
     (raw: string) => {
       if (!level || timeUp) return;
@@ -114,7 +165,12 @@ export function PuzzleScreen({ navigation, route }: Props) {
       </View>
 
       <View style={styles.gridArea}>
-        <GridView layout={layout} foundWords={foundWords} maxWidth={width - spacing.lg * 2} />
+        <GridView
+          layout={layout}
+          foundWords={foundWords}
+          hintCells={hintCells}
+          maxWidth={width - spacing.lg * 2}
+        />
       </View>
 
       <View style={styles.previewRow}>
@@ -150,6 +206,19 @@ export function PuzzleScreen({ navigation, route }: Props) {
         </View>
       ) : (
         <View style={styles.wheelArea}>
+          {boostCompanion && (
+            <AppButton
+              title={
+                boostAvailable
+                  ? `${boostCompanion.name}'s Help`
+                  : `${boostCompanion.name}'s Help (used)`
+              }
+              variant="ghost"
+              disabled={!boostAvailable}
+              style={!boostAvailable ? styles.boostUsed : styles.boost}
+              onPress={onBoost}
+            />
+          )}
           <LetterWheel letters={wheel} onWord={onWord} onPreview={setPreview} />
         </View>
       )}
@@ -179,6 +248,8 @@ const styles = StyleSheet.create({
   previewGood: { borderColor: colors.success },
   previewBad: { borderColor: colors.danger },
   previewText: { letterSpacing: 2 },
-  wheelArea: { paddingHorizontal: spacing.xl, paddingBottom: spacing.md },
+  wheelArea: { paddingHorizontal: spacing.xl, paddingBottom: spacing.md, gap: spacing.sm },
+  boost: { alignSelf: 'center' },
+  boostUsed: { alignSelf: 'center', opacity: 0.4 },
   endState: { gap: spacing.md, paddingBottom: spacing.md, alignItems: 'stretch' },
 });

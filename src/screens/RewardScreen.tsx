@@ -20,6 +20,7 @@ export function RewardScreen({ navigation, route }: Props) {
   const addCoins = useGameStore((s) => s.addCoins);
   const grantArtifact = useGameStore((s) => s.grantArtifact);
   const unlockCompanion = useGameStore((s) => s.unlockCompanion);
+  const setCompanionActive = useGameStore((s) => s.setCompanionActive);
   const addFatigue = useGameStore((s) => s.addFatigue);
 
   // Award once on mount. Boss levels grant the artifact + companion.
@@ -29,7 +30,11 @@ export function RewardScreen({ navigation, route }: Props) {
     addFatigue(FATIGUE_PER_LEVEL);
     if (level?.isBoss && entity) {
       if (entity.artifactId) grantArtifact(entity.artifactId);
-      if (entity.companionId) unlockCompanion(entity.companionId);
+      if (entity.companionId) {
+        unlockCompanion(entity.companionId);
+        // Auto-equip if there's room, so the boost is usable right away.
+        setCompanionActive(entity.companionId, true);
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

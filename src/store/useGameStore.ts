@@ -27,7 +27,7 @@ export const useGameStore = create<RootStore>()(
       ...createPuzzleSlice(...a),
     }),
     {
-      name: 'bbl-save-v1',
+      name: 'bbl-save-v2',
       storage: createJSONStorage(() => AsyncStorage),
       // Persist progression/economy/settings; never persist transient puzzle state.
       partialize: (s) => ({

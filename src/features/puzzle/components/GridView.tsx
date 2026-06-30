@@ -13,10 +13,13 @@ import { keyOf, revealedCellKeys, type GridLayout } from '../engine/layout';
 export function GridView({
   layout,
   foundWords,
+  hintCells,
   maxWidth,
 }: {
   layout: GridLayout;
   foundWords: string[];
+  /** Cell keys revealed by a Companion Boost (shown but not yet "found"). */
+  hintCells?: string[];
   /** Available horizontal space; tiles are sized to fit within it. */
   maxWidth: number;
 }) {
@@ -24,6 +27,8 @@ export function GridView({
     () => revealedCellKeys(layout, foundWords),
     [layout, foundWords],
   );
+
+  const hinted = React.useMemo(() => new Set(hintCells ?? []), [hintCells]);
 
   // Map occupied cells for O(1) lookup while rendering the rectangle.
   const cellLetters = React.useMemo(() => {
@@ -49,6 +54,7 @@ export function GridView({
               return <View key={col} style={{ width: size, height: size }} />;
             }
             const isRevealed = revealed.has(key);
+            const isHint = !isRevealed && hinted.has(key);
             return (
               <View
                 key={col}
@@ -56,10 +62,19 @@ export function GridView({
                   styles.cell,
                   { width: size, height: size },
                   isRevealed && styles.cellRevealed,
+                  isHint && styles.cellHint,
                 ]}
               >
-                {isRevealed && (
-                  <AppText style={[styles.letter, { fontSize: size * 0.5 }]}>{letter}</AppText>
+                {(isRevealed || isHint) && (
+                  <AppText
+                    style={[
+                      styles.letter,
+                      isHint && styles.letterHint,
+                      { fontSize: size * 0.5 },
+                    ]}
+                  >
+                    {letter}
+                  </AppText>
                 )}
               </View>
             );
@@ -86,5 +101,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bgElevated,
     borderColor: colors.accent,
   },
+  cellHint: {
+    backgroundColor: colors.bgElevated,
+    borderColor: colors.textMuted,
+    borderStyle: 'dashed',
+  },
   letter: { color: colors.accentSoft, fontWeight: '800' },
+  letterHint: { color: colors.textMuted },
 });

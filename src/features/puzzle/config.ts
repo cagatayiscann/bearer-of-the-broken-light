@@ -12,4 +12,8 @@ export const puzzleConfig = {
   },
   /** Artifact whose effect adds time on timed trials. */
   timeBonusArtifactId: 'time-slowing-crystal',
+  companion: {
+    /** Companion Boosts allowed per puzzle (GAME_DESIGN.md §8: help is limited). */
+    boostsPerPuzzle: 1,
+  },
 } as const;

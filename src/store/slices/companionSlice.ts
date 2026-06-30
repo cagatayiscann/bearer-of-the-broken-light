@@ -12,12 +12,15 @@ export interface CompanionSlice {
   setCompanionActive: (id: string, active: boolean) => boolean;
 }
 
+/** Grizz is the starter companion (GAME_DESIGN.md §8) — available from the start. */
+const STARTER_COMPANION_ID = 'grizz';
+
 export const createCompanionSlice: StateCreator<RootStore, [], [], CompanionSlice> = (
   set,
   get,
 ) => ({
-  unlockedCompanionIds: [],
-  activeCompanionIds: [],
+  unlockedCompanionIds: [STARTER_COMPANION_ID],
+  activeCompanionIds: [STARTER_COMPANION_ID],
 
   unlockCompanion: (id) =>
     set((s) => ({
