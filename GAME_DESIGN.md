@@ -51,6 +51,24 @@ Game
 Rough volume target: `10 themes × 4 entities × 6 levels ≈ 240 puzzles` at launch,
 extendable via content packs (data-only updates).
 
+### Biome arc (LOCKED — launch order)
+
+The journey runs as one continuous world map from the forest edge to the source
+of the broken light. Themes unlock in this order; each is a region on the map.
+
+| # | Theme | Feel |
+|---|-------|------|
+| 1 | **Whispering Wood** | Forest start; calm onboarding. |
+| 2 | **Drowned Fen** | Misty swamp/marsh. |
+| 3 | **Ash Desert** | Scorched dunes and ruins. |
+| 4 | **Frostpeak** | Frozen mountains. |
+| 5 | **Sunken City** | Drowned ruins by dark water. |
+| 6 | **Ember Deep** | Underground caverns, lava glow. |
+| 7 | **The Shattered Spire** | Finale — the source of the broken light. |
+
+> The map shows the whole arc (a visible end point = motivation, §6). Unreached
+> regions stay fogged silhouettes; only the current region's nodes are playable.
+
 ---
 
 ## 5. The two-layer content model (CORE PRINCIPLE)

@@ -11,6 +11,17 @@ export const colors = {
   danger: '#C0392B',
   success: '#5FB07A',
   fog: '#15101D',
+  /** Journey map / diorama palette (Hand-of-Fate-inspired tabletop). */
+  mapWood: '#3D2817',
+  mapWoodLight: '#6B4423',
+  mapWoodDark: '#26180F',
+  mapSkyTop: '#2A3548',
+  mapSkyBottom: '#141C24',
+  mapHill: '#2A4030',
+  mapHillLight: '#3D5A42',
+  mapHillFar: '#1E2E38',
+  mapWater: '#1A3340',
+  mapMist: 'rgba(14, 11, 20, 0.72)',
 } as const;
 
 export const spacing = {
