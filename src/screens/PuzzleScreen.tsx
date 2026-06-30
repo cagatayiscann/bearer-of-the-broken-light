@@ -56,6 +56,7 @@ export function PuzzleScreen({ navigation, route }: Props) {
   }));
 
   const isTimed = level?.twist === 'timer';
+  const isDarkness = level?.twist === 'darkness';
   const layout = React.useMemo(() => (level ? generateLayout(level.words) : null), [level]);
   const timerUrgent = isTimed && timeRemaining !== null && timeRemaining <= 10;
 
@@ -223,6 +224,17 @@ export function PuzzleScreen({ navigation, route }: Props) {
             </AppText>
           </View>
         )}
+
+        {isDarkness && !isTimed && (
+          <View style={[styles.hudStat, styles.hudStatRight]}>
+            <AppText variant="small" style={styles.hudLabel}>
+              Mist shrouds
+            </AppText>
+            <AppText variant="heading" style={styles.hudValue}>
+              Brush to read
+            </AppText>
+          </View>
+        )}
       </View>
 
       <View style={styles.gridArea}>
@@ -231,6 +243,7 @@ export function PuzzleScreen({ navigation, route }: Props) {
           foundWords={foundWords}
           hintCells={hintCells}
           maxWidth={width - spacing.lg * 2}
+          darkness={isDarkness}
         />
       </View>
 
@@ -311,7 +324,9 @@ export function PuzzleScreen({ navigation, route }: Props) {
             )}
           </View>
           <AppText variant="small" style={styles.wheelHint}>
-            Trace the runes to spell a word
+            {isDarkness
+              ? 'Brush the grid to read letters, then trace the runes'
+              : 'Trace the runes to spell a word'}
           </AppText>
           <LetterWheel letters={wheelLetters} onWord={onWord} onPreview={setPreview} />
         </View>

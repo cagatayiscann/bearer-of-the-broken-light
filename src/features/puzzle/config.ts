@@ -25,4 +25,8 @@ export const puzzleConfig = {
     cellPopMs: 420,
     previewPulseMs: 280,
   },
+  darkness: {
+    /** Extra touch padding around each cell for braille-style reading. */
+    touchPadding: 6,
+  },
 } as const;
