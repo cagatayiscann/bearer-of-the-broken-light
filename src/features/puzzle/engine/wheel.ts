@@ -73,3 +73,16 @@ export function classifyGuess(
   const alreadyFound = found.some((w) => normalizeWord(w) === g);
   return alreadyFound ? 'duplicate' : 'valid';
 }
+
+/**
+ * Return a new permutation of the same letter multiset (Fisher–Yates).
+ * Optional `rng` keeps tests deterministic; UI passes Math.random.
+ */
+export function shuffleWheel(letters: string[], rng: () => number = Math.random): string[] {
+  const out = [...letters];
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
+}

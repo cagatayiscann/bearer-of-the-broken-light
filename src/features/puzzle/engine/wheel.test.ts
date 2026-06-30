@@ -2,6 +2,7 @@ import {
   canBuildFromWheel,
   classifyGuess,
   deriveWheel,
+  shuffleWheel,
   wordFromSelection,
 } from './wheel';
 
@@ -70,5 +71,25 @@ describe('classifyGuess', () => {
 
   it('is case- and whitespace-insensitive', () => {
     expect(classifyGuess(' root ', words, [])).toBe('valid');
+  });
+});
+
+describe('shuffleWheel', () => {
+  it('preserves the letter multiset', () => {
+    const src = ['R', 'O', 'O', 'T'];
+    const shuffled = shuffleWheel(src, () => 0.5);
+    expect([...shuffled].sort()).toEqual([...src].sort());
+  });
+
+  it('does not mutate the source array', () => {
+    const src = ['A', 'B', 'C'];
+    shuffleWheel(src, () => 0);
+    expect(src).toEqual(['A', 'B', 'C']);
+  });
+
+  it('is deterministic when rng is fixed', () => {
+    const src = ['R', 'O', 'O', 'T'];
+    const rng = () => 0.25;
+    expect(shuffleWheel(src, rng)).toEqual(shuffleWheel(src, rng));
   });
 });

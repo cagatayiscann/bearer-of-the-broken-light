@@ -1,16 +1,21 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React from 'react';
 import { StyleSheet, useWindowDimensions, View } from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSequence,
+  withSpring,
+} from 'react-native-reanimated';
 
 import type { RootStackParamList } from '../app/navigation';
 import { getCompanion, getLevel } from '../content';
 import { puzzleConfig } from '../features/puzzle/config';
 import { GridView } from '../features/puzzle/components/GridView';
 import { LetterWheel } from '../features/puzzle/components/LetterWheel';
-import { deriveWheel } from '../features/puzzle/engine/wheel';
+import { deriveWheel, shuffleWheel, classifyGuess } from '../features/puzzle/engine/wheel';
 import { generateLayout } from '../features/puzzle/engine/layout';
 import { pickHintCells } from '../features/puzzle/engine/hints';
-import { classifyGuess } from '../features/puzzle/engine/wheel';
 import { normalizeWord } from '../features/puzzle/engine/wordGrid';
 import { useGameStore } from '../store/useGameStore';
 import { AppButton, AppText, Screen } from '../ui/components';
@@ -39,19 +44,27 @@ export function PuzzleScreen({ navigation, route }: Props) {
 
   const [preview, setPreview] = React.useState('');
   const [flash, setFlash] = React.useState<Flash>(null);
+  const [wheelLetters, setWheelLetters] = React.useState<string[]>([]);
+
+  const previewScale = useSharedValue(1);
+  const previewAnim = useAnimatedStyle(() => ({
+    transform: [{ scale: previewScale.value }],
+  }));
 
   const isTimed = level?.twist === 'timer';
-
-  // Derive the (deterministic) layout + wheel from level DATA via the pure engine.
   const layout = React.useMemo(() => (level ? generateLayout(level.words) : null), [level]);
-  const wheel = React.useMemo(() => (level ? deriveWheel(level.words) : []), [level]);
+
+  // Fresh wheel order each puzzle; parent owns shuffle (engine stays pure).
+  React.useEffect(() => {
+    if (!level) return;
+    setWheelLetters(shuffleWheel(deriveWheel(level.words)));
+  }, [level]);
 
   React.useEffect(() => {
     if (!level) return;
     let seconds: number | null = null;
     if (isTimed) {
       seconds = puzzleConfig.timer.baseSeconds;
-      // Artifact effect: the Time-Slowing Crystal grants extra seconds.
       if (hasArtifact(puzzleConfig.timeBonusArtifactId)) {
         seconds += puzzleConfig.timer.crystalBonusSeconds;
       }
@@ -63,7 +76,6 @@ export function PuzzleScreen({ navigation, route }: Props) {
   const allFound = !!level && level.words.every((w) => foundWords.includes(normalizeWord(w)));
   const timeUp = isTimed && timeRemaining !== null && timeRemaining <= 0 && !allFound;
 
-  // Countdown for timed (boss) trials.
   React.useEffect(() => {
     if (!isTimed || allFound || timeRemaining === null || timeRemaining <= 0) return;
     const id = setInterval(() => {
@@ -74,12 +86,26 @@ export function PuzzleScreen({ navigation, route }: Props) {
     return () => clearInterval(id);
   }, [isTimed, allFound, timeRemaining, setTimeRemaining]);
 
-  const showFlash = React.useCallback((text: string, tone: 'good' | 'bad') => {
-    setFlash({ text, tone });
-    setTimeout(() => setFlash(null), 900);
-  }, []);
+  const pulsePreview = React.useCallback(
+    (tone: 'good' | 'bad') => {
+      const bump = tone === 'good' ? 1.12 : 1.06;
+      previewScale.value = withSequence(
+        withSpring(bump, { damping: 10, stiffness: 360 }),
+        withSpring(1, { damping: 14, stiffness: 280 }),
+      );
+    },
+    [previewScale],
+  );
 
-  // The first active companion that can offer a boost (GAME_DESIGN.md §8).
+  const showFlash = React.useCallback(
+    (text: string, tone: 'good' | 'bad') => {
+      setFlash({ text, tone });
+      pulsePreview(tone);
+      setTimeout(() => setFlash(null), puzzleConfig.juice.flashDurationMs);
+    },
+    [pulsePreview],
+  );
+
   const boostCompanion = React.useMemo(() => {
     for (const id of activeCompanionIds) {
       const c = getCompanion(id);
@@ -105,7 +131,7 @@ export function PuzzleScreen({ navigation, route }: Props) {
       if (timeRemaining === null) return;
       setTimeRemaining(timeRemaining + (help.amount ?? 10));
     } else {
-      return; // miniGame not implemented yet
+      return;
     }
     useBoost();
     const bark = boostCompanion.barks[Math.floor(Math.random() * boostCompanion.barks.length)];
@@ -123,6 +149,10 @@ export function PuzzleScreen({ navigation, route }: Props) {
     useBoost,
     showFlash,
   ]);
+
+  const onShuffle = React.useCallback(() => {
+    setWheelLetters((prev) => shuffleWheel(prev));
+  }, []);
 
   const onWord = React.useCallback(
     (raw: string) => {
@@ -157,7 +187,10 @@ export function PuzzleScreen({ navigation, route }: Props) {
         {isTimed && (
           <AppText
             variant="heading"
-            style={{ color: timeRemaining !== null && timeRemaining <= 10 ? colors.danger : colors.accentSoft }}
+            style={{
+              color:
+                timeRemaining !== null && timeRemaining <= 10 ? colors.danger : colors.accentSoft,
+            }}
           >
             {Math.max(0, timeRemaining ?? 0)}s
           </AppText>
@@ -174,11 +207,18 @@ export function PuzzleScreen({ navigation, route }: Props) {
       </View>
 
       <View style={styles.previewRow}>
-        <View style={[styles.previewPill, flash?.tone === 'bad' && styles.previewBad, flash?.tone === 'good' && styles.previewGood]}>
+        <Animated.View
+          style={[
+            styles.previewPill,
+            flash?.tone === 'bad' && styles.previewBad,
+            flash?.tone === 'good' && styles.previewGood,
+            previewAnim,
+          ]}
+        >
           <AppText variant="heading" style={styles.previewText}>
             {flash ? flash.text : preview || ' '}
           </AppText>
-        </View>
+        </Animated.View>
       </View>
 
       {timeUp ? (
@@ -194,6 +234,7 @@ export function PuzzleScreen({ navigation, route }: Props) {
                 seconds += puzzleConfig.timer.crystalBonusSeconds;
               }
               startPuzzle(level.id, seconds);
+              setWheelLetters(shuffleWheel(deriveWheel(level.words)));
             }}
           />
         </View>
@@ -201,25 +242,37 @@ export function PuzzleScreen({ navigation, route }: Props) {
         <View style={styles.endState}>
           <AppButton
             title="Complete Trial"
-            onPress={() => navigation.replace('Reward', { levelId: level.id, entityId: level.entityId })}
+            onPress={() =>
+              navigation.replace('Reward', { levelId: level.id, entityId: level.entityId })
+            }
           />
         </View>
       ) : (
         <View style={styles.wheelArea}>
-          {boostCompanion && (
-            <AppButton
-              title={
-                boostAvailable
-                  ? `${boostCompanion.name}'s Help`
-                  : `${boostCompanion.name}'s Help (used)`
-              }
-              variant="ghost"
-              disabled={!boostAvailable}
-              style={!boostAvailable ? styles.boostUsed : styles.boost}
-              onPress={onBoost}
-            />
-          )}
-          <LetterWheel letters={wheel} onWord={onWord} onPreview={setPreview} />
+          <View style={styles.wheelActions}>
+            {boostCompanion && (
+              <AppButton
+                title={
+                  boostAvailable
+                    ? `${boostCompanion.name}'s Help`
+                    : `${boostCompanion.name}'s Help (used)`
+                }
+                variant="ghost"
+                disabled={!boostAvailable}
+                style={[styles.actionBtn, !boostAvailable && styles.actionDisabled]}
+                onPress={onBoost}
+              />
+            )}
+            {puzzleConfig.wheel.shuffleEnabled && (
+              <AppButton
+                title="Shuffle"
+                variant="ghost"
+                style={styles.actionBtn}
+                onPress={onShuffle}
+              />
+            )}
+          </View>
+          <LetterWheel letters={wheelLetters} onWord={onWord} onPreview={setPreview} />
         </View>
       )}
     </Screen>
@@ -249,7 +302,13 @@ const styles = StyleSheet.create({
   previewBad: { borderColor: colors.danger },
   previewText: { letterSpacing: 2 },
   wheelArea: { paddingHorizontal: spacing.xl, paddingBottom: spacing.md, gap: spacing.sm },
-  boost: { alignSelf: 'center' },
-  boostUsed: { alignSelf: 'center', opacity: 0.4 },
+  wheelActions: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  actionBtn: { flexGrow: 1, minWidth: 120 },
+  actionDisabled: { opacity: 0.4 },
   endState: { gap: spacing.md, paddingBottom: spacing.md, alignItems: 'stretch' },
 });

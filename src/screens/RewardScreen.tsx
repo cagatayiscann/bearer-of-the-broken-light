@@ -4,6 +4,7 @@ import { StyleSheet, View } from 'react-native';
 
 import type { RootStackParamList } from '../app/navigation';
 import { getArtifact, getCompanion, getEntity, getLevel } from '../content';
+import { entityLevelSequence, nextLevelId } from '../features/map/progression';
 import { FATIGUE_PER_LEVEL } from '../store/slices/fatigueSlice';
 import { useGameStore } from '../store/useGameStore';
 import { AppButton, AppText, Screen } from '../ui/components';
@@ -43,6 +44,8 @@ export function RewardScreen({ navigation, route }: Props) {
   const companion =
     level?.isBoss && entity?.companionId ? getCompanion(entity.companionId) : undefined;
 
+  const next = entity ? nextLevelId(entityLevelSequence(entity), levelId) : null;
+
   return (
     <Screen style={styles.container}>
       <View style={styles.body}>
@@ -62,7 +65,19 @@ export function RewardScreen({ navigation, route }: Props) {
         )}
       </View>
 
-      <AppButton title="Continue" onPress={() => navigation.navigate('Map')} />
+      <View style={styles.actions}>
+        {next && entity && (
+          <AppButton
+            title="Next Trial"
+            onPress={() => navigation.replace('Puzzle', { levelId: next })}
+          />
+        )}
+        <AppButton
+          title={next ? 'Return to Map' : 'Continue'}
+          variant={next ? 'ghost' : 'primary'}
+          onPress={() => navigation.navigate('Map')}
+        />
+      </View>
     </Screen>
   );
 }
@@ -71,4 +86,5 @@ const styles = StyleSheet.create({
   container: { justifyContent: 'space-between' },
   body: { marginTop: spacing.xl * 2, gap: spacing.md, alignItems: 'center' },
   reward: { textAlign: 'center' },
+  actions: { gap: spacing.sm },
 });

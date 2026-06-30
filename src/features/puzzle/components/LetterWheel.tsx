@@ -1,7 +1,13 @@
 import React from 'react';
 import { LayoutChangeEvent, StyleSheet, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import { runOnJS } from 'react-native-reanimated';
+import Animated, {
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withSequence,
+  withSpring,
+} from 'react-native-reanimated';
 
 import { AppText } from '../../../ui/components';
 import { colors, radius } from '../../../ui/theme';
@@ -24,9 +30,7 @@ export function LetterWheel({
   disabled,
 }: {
   letters: string[];
-  /** Fired on release with the spelled word (may be empty/invalid — parent judges). */
   onWord: (word: string) => void;
-  /** Fired as the selection changes, for a live "current guess" readout. */
   onPreview?: (current: string) => void;
   disabled?: boolean;
 }) {
@@ -34,9 +38,23 @@ export function LetterWheel({
   const [selected, setSelected] = React.useState<number[]>([]);
   const [finger, setFinger] = React.useState<Point | null>(null);
 
-  // Keep a ref in sync so gesture callbacks (via runOnJS) read current selection.
   const selectedRef = React.useRef<number[]>([]);
   selectedRef.current = selected;
+
+  const wheelSpin = useSharedValue(0);
+
+  // Clear in-progress selection when the parent shuffles letter order.
+  React.useEffect(() => {
+    selectedRef.current = [];
+    setSelected([]);
+    setFinger(null);
+    onPreview?.('');
+    wheelSpin.value = withSequence(
+      withSpring(-0.08, { damping: 12, stiffness: 280 }),
+      withSpring(0, { damping: 14, stiffness: 220 }),
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [letters]);
 
   const nodes = React.useMemo<Point[]>(() => {
     if (!diameter) return [];
@@ -107,12 +125,14 @@ export function LetterWheel({
         .onFinalize(() => {
           runOnJS(end)();
         }),
-    // touch/end close over nodes; rebuild when geometry or letters change.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [disabled, nodes, letters],
   );
 
-  // Connecting segments between consecutive selected nodes (+ live finger trail).
+  const wheelAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${wheelSpin.value}rad` }],
+  }));
+
   const segments: { from: Point; to: Point }[] = [];
   for (let i = 0; i < selected.length - 1; i++) {
     segments.push({ from: nodes[selected[i]], to: nodes[selected[i + 1]] });
@@ -123,7 +143,7 @@ export function LetterWheel({
 
   return (
     <GestureDetector gesture={pan}>
-      <View style={styles.container} onLayout={onLayout}>
+      <Animated.View style={[styles.container, wheelAnimStyle]} onLayout={onLayout}>
         {segments.map((s, i) => (
           <Segment key={i} from={s.from} to={s.to} />
         ))}
@@ -133,7 +153,7 @@ export function LetterWheel({
           const order = selected.indexOf(i);
           return (
             <View
-              key={i}
+              key={`${letters[i]}-${i}`}
               style={[
                 styles.node,
                 {
@@ -159,12 +179,11 @@ export function LetterWheel({
             </View>
           );
         })}
-      </View>
+      </Animated.View>
     </GestureDetector>
   );
 }
 
-/** A single connecting line drawn as a rotated View (avoids an SVG dependency). */
 function Segment({ from, to }: { from: Point; to: Point }) {
   const dx = to.x - from.x;
   const dy = to.y - from.y;

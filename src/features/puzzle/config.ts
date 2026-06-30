@@ -16,4 +16,13 @@ export const puzzleConfig = {
     /** Companion Boosts allowed per puzzle (GAME_DESIGN.md §8: help is limited). */
     boostsPerPuzzle: 1,
   },
+  wheel: {
+    /** Shuffle is a calm-flow comfort tool — no per-puzzle cap in the slice. */
+    shuffleEnabled: true,
+  },
+  juice: {
+    flashDurationMs: 900,
+    cellPopMs: 420,
+    previewPulseMs: 280,
+  },
 } as const;

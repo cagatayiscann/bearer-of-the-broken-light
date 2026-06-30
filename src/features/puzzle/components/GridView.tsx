@@ -1,14 +1,21 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSequence,
+  withSpring,
+} from 'react-native-reanimated';
 
 import { AppText } from '../../../ui/components';
 import { colors, radius } from '../../../ui/theme';
+import { puzzleConfig } from '../config';
 import { keyOf, revealedCellKeys, type GridLayout } from '../engine/layout';
 
 /**
  * Renders the crossword grid produced by the pure layout engine.
  * Cells belonging to found words show their letter; the rest are blank slots.
- * Purely presentational — all layout math comes from `engine/layout`.
+ * Newly revealed cells get a short scale "pop" (GAME_DESIGN.md §10 juice).
  */
 export function GridView({
   layout,
@@ -18,9 +25,7 @@ export function GridView({
 }: {
   layout: GridLayout;
   foundWords: string[];
-  /** Cell keys revealed by a Companion Boost (shown but not yet "found"). */
   hintCells?: string[];
-  /** Available horizontal space; tiles are sized to fit within it. */
   maxWidth: number;
 }) {
   const revealed = React.useMemo(
@@ -30,12 +35,27 @@ export function GridView({
 
   const hinted = React.useMemo(() => new Set(hintCells ?? []), [hintCells]);
 
-  // Map occupied cells for O(1) lookup while rendering the rectangle.
   const cellLetters = React.useMemo(() => {
     const m = new Map<string, string>();
     for (const c of layout.cells) m.set(keyOf(c.row, c.col), c.letter);
     return m;
   }, [layout]);
+
+  // Track which cells just became visible so we can pulse them once.
+  const prevRevealed = React.useRef<Set<string>>(new Set());
+  const [pulsing, setPulsing] = React.useState<Set<string>>(() => new Set());
+
+  React.useEffect(() => {
+    const fresh = new Set<string>();
+    for (const k of revealed) {
+      if (!prevRevealed.current.has(k)) fresh.add(k);
+    }
+    prevRevealed.current = revealed;
+    if (fresh.size === 0) return;
+    setPulsing(fresh);
+    const id = setTimeout(() => setPulsing(new Set()), puzzleConfig.juice.cellPopMs);
+    return () => clearTimeout(id);
+  }, [revealed]);
 
   if (layout.cols === 0 || layout.rows === 0) return null;
 
@@ -48,40 +68,75 @@ export function GridView({
       {Array.from({ length: layout.rows }).map((_, row) => (
         <View key={row} style={[styles.row, { gap }]}>
           {Array.from({ length: layout.cols }).map((_, col) => {
-            const key = keyOf(row, col);
-            const letter = cellLetters.get(key);
+            const cellKey = keyOf(row, col);
+            const letter = cellLetters.get(cellKey);
             if (!letter) {
               return <View key={col} style={{ width: size, height: size }} />;
             }
-            const isRevealed = revealed.has(key);
-            const isHint = !isRevealed && hinted.has(key);
+            const isRevealed = revealed.has(cellKey);
+            const isHint = !isRevealed && hinted.has(cellKey);
             return (
-              <View
+              <GridCell
                 key={col}
-                style={[
-                  styles.cell,
-                  { width: size, height: size },
-                  isRevealed && styles.cellRevealed,
-                  isHint && styles.cellHint,
-                ]}
-              >
-                {(isRevealed || isHint) && (
-                  <AppText
-                    style={[
-                      styles.letter,
-                      isHint && styles.letterHint,
-                      { fontSize: size * 0.5 },
-                    ]}
-                  >
-                    {letter}
-                  </AppText>
-                )}
-              </View>
+                size={size}
+                letter={letter}
+                isRevealed={isRevealed}
+                isHint={isHint}
+                pulse={pulsing.has(cellKey)}
+              />
             );
           })}
         </View>
       ))}
     </View>
+  );
+}
+
+function GridCell({
+  size,
+  letter,
+  isRevealed,
+  isHint,
+  pulse,
+}: {
+  size: number;
+  letter: string;
+  isRevealed: boolean;
+  isHint: boolean;
+  pulse: boolean;
+}) {
+  const scale = useSharedValue(1);
+
+  React.useEffect(() => {
+    if (!pulse) return;
+    scale.value = withSequence(
+      withSpring(1.18, { damping: 9, stiffness: 320 }),
+      withSpring(1, { damping: 14, stiffness: 260 }),
+    );
+  }, [pulse, scale]);
+
+  const animStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  return (
+    <Animated.View
+      style={[
+        styles.cell,
+        { width: size, height: size },
+        isRevealed && styles.cellRevealed,
+        isHint && styles.cellHint,
+        animStyle,
+      ]}
+    >
+      {(isRevealed || isHint) && (
+        <AppText
+          style={[styles.letter, isHint && styles.letterHint, { fontSize: size * 0.5 }]}
+        >
+          {letter}
+        </AppText>
+      )}
+    </Animated.View>
   );
 }
 
