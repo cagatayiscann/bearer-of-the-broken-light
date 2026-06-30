@@ -20,7 +20,7 @@ import { pickHintCells } from '../features/puzzle/engine/hints';
 import { normalizeWord } from '../features/puzzle/engine/wordGrid';
 import { useGameStore } from '../store/useGameStore';
 import { AppButton, AppText, Screen } from '../ui/components';
-import { colors, radius, spacing } from '../ui/theme';
+import { colors, spacing } from '../ui/theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Puzzle'>;
 
@@ -197,7 +197,7 @@ export function PuzzleScreen({ navigation, route }: Props) {
   const puzzleBody = (
     <>
       <View style={styles.hud}>
-        <View style={styles.hudPanel}>
+        <View style={styles.hudStat}>
           <AppText variant="small" style={styles.hudLabel}>
             Words found
           </AppText>
@@ -211,13 +211,13 @@ export function PuzzleScreen({ navigation, route }: Props) {
         </View>
 
         {isTimed && (
-          <View style={[styles.hudPanel, timerUrgent && styles.hudPanelUrgent]}>
+          <View style={[styles.hudStat, styles.hudStatRight]}>
             <AppText variant="small" style={styles.hudLabel}>
               Light fades
             </AppText>
             <AppText
               variant="heading"
-              style={[styles.hudValue, timerUrgent && { color: colors.danger }]}
+              style={[styles.hudValue, timerUrgent && styles.hudValueUrgent]}
             >
               {Math.max(0, timeRemaining ?? 0)}s
             </AppText>
@@ -226,29 +226,31 @@ export function PuzzleScreen({ navigation, route }: Props) {
       </View>
 
       <View style={styles.gridArea}>
-        <View style={styles.gridFrame}>
-          <View style={styles.gridFrameAccent} />
-          <View style={styles.gridFrameInner}>
-            <GridView
-              layout={layout}
-              foundWords={foundWords}
-              hintCells={hintCells}
-              maxWidth={width - spacing.lg * 4}
-            />
-          </View>
-        </View>
+        <GridView
+          layout={layout}
+          foundWords={foundWords}
+          hintCells={hintCells}
+          maxWidth={width - spacing.lg * 2}
+        />
       </View>
 
       <View style={styles.previewRow}>
         <Animated.View
           style={[
-            styles.previewPill,
+            styles.previewWord,
             flash?.tone === 'bad' && styles.previewBad,
             flash?.tone === 'good' && styles.previewGood,
             previewAnim,
           ]}
         >
-          <AppText variant="heading" style={styles.previewText}>
+          <AppText
+            variant="heading"
+            style={[
+              styles.previewText,
+              flash?.tone === 'good' && styles.previewTextGood,
+              flash?.tone === 'bad' && styles.previewTextBad,
+            ]}
+          >
             {flash ? flash.text : preview || '—'}
           </AppText>
         </Animated.View>
@@ -295,11 +297,7 @@ export function PuzzleScreen({ navigation, route }: Props) {
                 }
                 variant="ghost"
                 disabled={!boostAvailable}
-                style={[
-                  styles.actionBtn,
-                  styles.actionFantasy,
-                  !boostAvailable && styles.actionDisabled,
-                ]}
+                style={[styles.actionBtn, !boostAvailable && styles.actionDisabled]}
                 onPress={onBoost}
               />
             )}
@@ -307,17 +305,15 @@ export function PuzzleScreen({ navigation, route }: Props) {
               <AppButton
                 title="Scatter Runes"
                 variant="ghost"
-                style={[styles.actionBtn, styles.actionFantasy]}
+                style={styles.actionBtn}
                 onPress={onShuffle}
               />
             )}
           </View>
-          <View style={styles.wheelFrame}>
-            <AppText variant="small" style={styles.wheelHint}>
-              Trace the runes to spell a word
-            </AppText>
-            <LetterWheel letters={wheelLetters} onWord={onWord} onPreview={setPreview} />
-          </View>
+          <AppText variant="small" style={styles.wheelHint}>
+            Trace the runes to spell a word
+          </AppText>
+          <LetterWheel letters={wheelLetters} onWord={onWord} onPreview={setPreview} />
         </View>
       )}
     </>
@@ -357,72 +353,41 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     gap: spacing.sm,
+    paddingHorizontal: spacing.xs,
   },
-  hudPanel: {
-    flex: 1,
-    backgroundColor: colors.puzzleGlass,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.puzzleGoldBorder,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-  },
-  hudPanelUrgent: {
-    borderColor: colors.danger,
-    backgroundColor: 'rgba(60, 16, 16, 0.55)',
-  },
+  hudStat: { gap: 2 },
+  hudStatRight: { alignItems: 'flex-end' },
   hudLabel: {
     color: colors.accentSoft,
     textTransform: 'uppercase',
-    letterSpacing: 1.2,
+    letterSpacing: 1.4,
     fontSize: 11,
-    marginBottom: 2,
+    textShadowColor: 'rgba(0, 0, 0, 0.85)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 6,
   },
-  hudValue: { color: colors.text },
+  hudValue: {
+    color: colors.text,
+    textShadowColor: 'rgba(0, 0, 0, 0.85)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 8,
+  },
+  hudValueUrgent: { color: colors.danger },
   hudMuted: { color: colors.textMuted },
-  gridArea: { flex: 1, justifyContent: 'center', paddingVertical: spacing.sm },
-  gridFrame: {
-    alignSelf: 'center',
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.puzzleGoldBorder,
-    backgroundColor: colors.puzzleGlassStrong,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.35,
-    shadowRadius: 16,
-    elevation: 8,
+  gridArea: { flex: 1, justifyContent: 'center', paddingVertical: spacing.md },
+  previewRow: { alignItems: 'center', marginBottom: spacing.sm, minHeight: 36 },
+  previewWord: { alignItems: 'center', justifyContent: 'center' },
+  previewGood: {},
+  previewBad: {},
+  previewText: {
+    letterSpacing: 4,
+    color: colors.accentSoft,
+    textShadowColor: 'rgba(0, 0, 0, 0.9)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 10,
   },
-  gridFrameAccent: {
-    height: 3,
-    backgroundColor: colors.accent,
-    opacity: 0.65,
-  },
-  gridFrameInner: {
-    padding: spacing.lg,
-    alignItems: 'center',
-  },
-  previewRow: { alignItems: 'center', marginBottom: spacing.sm },
-  previewPill: {
-    minWidth: 160,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.lg,
-    borderRadius: radius.md,
-    backgroundColor: colors.puzzleParchment,
-    borderWidth: 1,
-    borderColor: colors.puzzleGoldBorder,
-    alignItems: 'center',
-  },
-  previewGood: {
-    borderColor: colors.success,
-    backgroundColor: 'rgba(20, 40, 28, 0.75)',
-  },
-  previewBad: {
-    borderColor: colors.danger,
-    backgroundColor: 'rgba(48, 16, 16, 0.75)',
-  },
-  previewText: { letterSpacing: 3, color: colors.accentSoft },
+  previewTextGood: { color: colors.success },
+  previewTextBad: { color: colors.danger },
   wheelArea: { paddingHorizontal: spacing.md, paddingBottom: spacing.md, gap: spacing.sm },
   wheelActions: {
     flexDirection: 'row',
@@ -430,26 +395,15 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: spacing.sm,
   },
-  actionBtn: { flexGrow: 1, minWidth: 120 },
-  actionFantasy: {
-    backgroundColor: colors.puzzleGlass,
-    borderColor: colors.puzzleGoldBorder,
-  },
+  actionBtn: { flexGrow: 1, minWidth: 120, backgroundColor: 'transparent', borderWidth: 0 },
   actionDisabled: { opacity: 0.4 },
-  wheelFrame: {
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.puzzleGoldBorder,
-    backgroundColor: colors.puzzleGlass,
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.xs,
-    paddingHorizontal: spacing.sm,
-  },
   wheelHint: {
     textAlign: 'center',
     color: colors.textMuted,
     fontStyle: 'italic',
-    marginBottom: spacing.xs,
+    textShadowColor: 'rgba(0, 0, 0, 0.85)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 6,
   },
   endState: { gap: spacing.md, paddingBottom: spacing.md, alignItems: 'stretch' },
 });
