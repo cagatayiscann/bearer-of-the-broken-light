@@ -1,13 +1,14 @@
 {
   "expo": {
-    "name": "_scaffold",
-    "slug": "_scaffold",
+    "name": "Bearer of the Broken Light",
+    "slug": "bearer-of-the-broken-light",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "dark",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.cato.bearerofthebrokenlight"
     },
     "android": {
       "adaptiveIcon": {
