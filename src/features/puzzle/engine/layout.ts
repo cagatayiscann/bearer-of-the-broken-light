@@ -212,3 +212,26 @@ export function toGridSpec(words: string[]): GridSpec {
   const layout = generateLayout(words);
   return { rows: layout.rows, cols: layout.cols, placements: layout.placements };
 }
+
+/**
+ * The set of "row,col" cell keys that should be shown filled, given the words
+ * the player has already found. Pure so the UI can render reveal state without
+ * any layout math of its own.
+ */
+export function revealedCellKeys(layout: GridLayout, foundWords: string[]): Set<string> {
+  const found = new Set(foundWords.map(normalizeWord));
+  const keys = new Set<string>();
+  for (const p of layout.placements) {
+    if (!found.has(normalizeWord(p.word))) continue;
+    const { dr, dc } = step(p.direction);
+    for (let i = 0; i < p.word.length; i++) {
+      keys.add(cellKey(p.row + dr * i, p.col + dc * i));
+    }
+  }
+  return keys;
+}
+
+/** Build a "row,col" key (exported to match revealedCellKeys output). */
+export function keyOf(row: number, col: number): string {
+  return cellKey(row, col);
+}

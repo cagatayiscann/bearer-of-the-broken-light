@@ -1,4 +1,4 @@
-import { generateLayout, toGridSpec } from './layout';
+import { generateLayout, keyOf, revealedCellKeys, toGridSpec } from './layout';
 import type { LayoutCell } from './layout';
 
 /** Build a quick lookup of "row,col" -> letter for assertions. */
@@ -69,6 +69,21 @@ describe('generateLayout', () => {
     const layout = generateLayout(['ROOT', 'XYZ']);
     expect(layout.unplaced).toContain('XYZ');
     expect(layout.placements).toHaveLength(1);
+  });
+
+  it('reveals only the cells of found words', () => {
+    const layout = generateLayout(['ROOT', 'MOSS']);
+    const none = revealedCellKeys(layout, []);
+    expect(none.size).toBe(0);
+
+    const rootPlacement = layout.placements.find((p) => p.word === 'ROOT')!;
+    const revealed = revealedCellKeys(layout, ['root']);
+    expect(revealed.size).toBe(4);
+    const dr = rootPlacement.direction === 'down' ? 1 : 0;
+    const dc = rootPlacement.direction === 'across' ? 1 : 0;
+    for (let i = 0; i < 4; i++) {
+      expect(revealed.has(keyOf(rootPlacement.row + dr * i, rootPlacement.col + dc * i))).toBe(true);
+    }
   });
 
   it('toGridSpec mirrors the layout dimensions and placements', () => {
