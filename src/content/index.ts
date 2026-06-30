@@ -46,16 +46,16 @@ export const levels: Level[] = [
     // Gentle first trial: a single 4-letter pool (R,O,O,T) with short sub-words.
     words: ['ROOT', 'ROT', 'TOO'],
   },
-  { id: 'ww-grizz-1', entityId: 'grizz-goblin', isBoss: false, words: ['LEAF', 'FARE', 'FEAR'] },
-  { id: 'ww-grizz-2', entityId: 'grizz-goblin', isBoss: false, words: ['VINE', 'NEVI', 'VEIN'] },
+  { id: 'ww-grizz-1', entityId: 'grizz-goblin', isBoss: false, words: ['BARK', 'ARK', 'BAR'] },
+  { id: 'ww-grizz-2', entityId: 'grizz-goblin', isBoss: false, words: ['VINE', 'NINE', 'VEIN'] },
   {
     id: 'ww-wisp-boss',
     entityId: 'whisper-wisp',
     isBoss: true,
     twist: 'darkness',
-    words: ['MIST', 'STIR', 'TRIM'],
+    words: ['MIST', 'FOG', 'GO'],
   },
-  { id: 'ww-wisp-1', entityId: 'whisper-wisp', isBoss: false, words: ['WISP', 'SPIN'] },
+  { id: 'ww-wisp-1', entityId: 'whisper-wisp', isBoss: false, words: ['WISP', 'SPIN', 'PIN'] },
 ];
 
 export const artifacts: Artifact[] = [

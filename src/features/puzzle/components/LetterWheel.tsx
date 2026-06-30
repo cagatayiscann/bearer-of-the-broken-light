@@ -144,6 +144,35 @@ export function LetterWheel({
   return (
     <GestureDetector gesture={pan}>
       <Animated.View style={[styles.container, wheelAnimStyle]} onLayout={onLayout}>
+        {diameter > 0 && (
+          <>
+            <View
+              style={[
+                styles.outerRing,
+                {
+                  width: diameter * 0.78,
+                  height: diameter * 0.78,
+                  borderRadius: diameter * 0.39,
+                  left: diameter * 0.11,
+                  top: diameter * 0.11,
+                },
+              ]}
+            />
+            <View
+              style={[
+                styles.innerGlow,
+                {
+                  width: diameter * 0.52,
+                  height: diameter * 0.52,
+                  borderRadius: diameter * 0.26,
+                  left: diameter * 0.24,
+                  top: diameter * 0.24,
+                },
+              ]}
+            />
+          </>
+        )}
+
         {segments.map((s, i) => (
           <Segment key={i} from={s.from} to={s.to} />
         ))}
@@ -189,7 +218,7 @@ function Segment({ from, to }: { from: Point; to: Point }) {
   const dy = to.y - from.y;
   const length = Math.hypot(dx, dy);
   const angle = (Math.atan2(dy, dx) * 180) / Math.PI;
-  const thickness = 6;
+  const thickness = 5;
   const midX = (from.x + to.x) / 2;
   const midY = (from.y + to.y) / 2;
   return (
@@ -202,8 +231,12 @@ function Segment({ from, to }: { from: Point; to: Point }) {
         width: length,
         height: thickness,
         borderRadius: thickness / 2,
-        backgroundColor: colors.accent,
-        opacity: 0.7,
+        backgroundColor: colors.accentSoft,
+        opacity: 0.85,
+        shadowColor: colors.accent,
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.8,
+        shadowRadius: 6,
         transform: [{ rotate: `${angle}deg` }],
       }}
     />
@@ -217,19 +250,39 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     position: 'relative',
   },
+  outerRing: {
+    position: 'absolute',
+    borderWidth: 1.5,
+    borderColor: colors.puzzleGoldBorder,
+    backgroundColor: colors.puzzleGoldGlow,
+  },
+  innerGlow: {
+    position: 'absolute',
+    backgroundColor: 'rgba(201, 162, 39, 0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(201, 162, 39, 0.12)',
+  },
   node: {
     position: 'absolute',
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
+    backgroundColor: colors.puzzleRuneDisc,
+    borderWidth: 2,
+    borderColor: colors.puzzleGoldBorder,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.4,
+    shadowRadius: 4,
+    elevation: 4,
   },
   nodeSelected: {
     backgroundColor: colors.accent,
     borderColor: colors.accentSoft,
+    shadowColor: colors.accent,
+    shadowOpacity: 0.6,
+    shadowRadius: 10,
   },
-  nodeText: { color: colors.text, fontWeight: '800' },
+  nodeText: { color: colors.accentSoft, fontWeight: '800' },
   nodeTextSelected: { color: '#1A1206' },
   orderDot: {
     position: 'absolute',

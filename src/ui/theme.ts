@@ -22,6 +22,15 @@ export const colors = {
   mapHillFar: '#1E2E38',
   mapWater: '#1A3340',
   mapMist: 'rgba(14, 11, 20, 0.72)',
+  /** Puzzle overlay — glass panels & rune discs over biome art. */
+  puzzleGlass: 'rgba(18, 12, 26, 0.58)',
+  puzzleGlassStrong: 'rgba(14, 10, 22, 0.78)',
+  puzzleGoldBorder: 'rgba(201, 162, 39, 0.42)',
+  puzzleGoldGlow: 'rgba(230, 195, 74, 0.22)',
+  puzzleCellEmpty: 'rgba(10, 7, 16, 0.5)',
+  puzzleCellRevealed: 'rgba(30, 22, 40, 0.88)',
+  puzzleParchment: 'rgba(36, 28, 20, 0.72)',
+  puzzleRuneDisc: 'rgba(22, 16, 30, 0.82)',
 } as const;
 
 export const spacing = {

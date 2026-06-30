@@ -1,6 +1,6 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React from 'react';
-import { StyleSheet, useWindowDimensions, View } from 'react-native';
+import { ImageBackground, StyleSheet, useWindowDimensions, View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -9,7 +9,8 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import type { RootStackParamList } from '../app/navigation';
-import { getCompanion, getLevel } from '../content';
+import { getBiomeBackground } from '../assets/images';
+import { getCompanion, getEntity, getLevel, getTheme } from '../content';
 import { puzzleConfig } from '../features/puzzle/config';
 import { GridView } from '../features/puzzle/components/GridView';
 import { LetterWheel } from '../features/puzzle/components/LetterWheel';
@@ -27,6 +28,9 @@ type Flash = { text: string; tone: 'good' | 'bad' } | null;
 
 export function PuzzleScreen({ navigation, route }: Props) {
   const level = getLevel(route.params.levelId);
+  const entity = level ? getEntity(level.entityId) : undefined;
+  const theme = entity ? getTheme(entity.themeId) : undefined;
+  const biomeBackground = theme ? getBiomeBackground(theme.id) : undefined;
   const { width } = useWindowDimensions();
 
   const foundWords = useGameStore((s) => s.foundWords);
@@ -53,6 +57,18 @@ export function PuzzleScreen({ navigation, route }: Props) {
 
   const isTimed = level?.twist === 'timer';
   const layout = React.useMemo(() => (level ? generateLayout(level.words) : null), [level]);
+  const timerUrgent = isTimed && timeRemaining !== null && timeRemaining <= 10;
+
+  React.useLayoutEffect(() => {
+    if (!entity || !level) return;
+    navigation.setOptions({
+      title: level.isBoss ? `${entity.name}'s Trial` : theme?.name ?? 'Word Trial',
+      headerTransparent: true,
+      headerStyle: { backgroundColor: 'transparent' },
+      headerTintColor: colors.accentSoft,
+      headerTitleStyle: { color: colors.text, fontWeight: '600' },
+    });
+  }, [navigation, entity, level, theme]);
 
   // Fresh wheel order each puzzle; parent owns shuffle (engine stays pure).
   React.useEffect(() => {
@@ -178,32 +194,49 @@ export function PuzzleScreen({ navigation, route }: Props) {
     );
   }
 
-  return (
-    <Screen style={styles.container}>
-      <View style={styles.header}>
-        <AppText muted>
-          {foundWords.length}/{level.words.length} words
-        </AppText>
-        {isTimed && (
-          <AppText
-            variant="heading"
-            style={{
-              color:
-                timeRemaining !== null && timeRemaining <= 10 ? colors.danger : colors.accentSoft,
-            }}
-          >
-            {Math.max(0, timeRemaining ?? 0)}s
+  const puzzleBody = (
+    <>
+      <View style={styles.hud}>
+        <View style={styles.hudPanel}>
+          <AppText variant="small" style={styles.hudLabel}>
+            Words found
           </AppText>
+          <AppText variant="heading" style={styles.hudValue}>
+            {foundWords.length}
+            <AppText variant="small" style={styles.hudMuted}>
+              {' '}
+              / {level.words.length}
+            </AppText>
+          </AppText>
+        </View>
+
+        {isTimed && (
+          <View style={[styles.hudPanel, timerUrgent && styles.hudPanelUrgent]}>
+            <AppText variant="small" style={styles.hudLabel}>
+              Light fades
+            </AppText>
+            <AppText
+              variant="heading"
+              style={[styles.hudValue, timerUrgent && { color: colors.danger }]}
+            >
+              {Math.max(0, timeRemaining ?? 0)}s
+            </AppText>
+          </View>
         )}
       </View>
 
       <View style={styles.gridArea}>
-        <GridView
-          layout={layout}
-          foundWords={foundWords}
-          hintCells={hintCells}
-          maxWidth={width - spacing.lg * 2}
-        />
+        <View style={styles.gridFrame}>
+          <View style={styles.gridFrameAccent} />
+          <View style={styles.gridFrameInner}>
+            <GridView
+              layout={layout}
+              foundWords={foundWords}
+              hintCells={hintCells}
+              maxWidth={width - spacing.lg * 4}
+            />
+          </View>
+        </View>
       </View>
 
       <View style={styles.previewRow}>
@@ -216,18 +249,21 @@ export function PuzzleScreen({ navigation, route }: Props) {
           ]}
         >
           <AppText variant="heading" style={styles.previewText}>
-            {flash ? flash.text : preview || ' '}
+            {flash ? flash.text : preview || '—'}
           </AppText>
         </Animated.View>
       </View>
 
       {timeUp ? (
         <View style={styles.endState}>
-          <AppText variant="heading" style={{ color: colors.danger }}>
+          <AppText variant="heading" style={{ color: colors.danger, textAlign: 'center' }}>
             The light dims...
           </AppText>
+          <AppText muted style={{ textAlign: 'center', fontStyle: 'italic' }}>
+            The forest holds its breath. Try once more.
+          </AppText>
           <AppButton
-            title="Try Again"
+            title="Relight the Trial"
             onPress={() => {
               let seconds = puzzleConfig.timer.baseSeconds;
               if (hasArtifact(puzzleConfig.timeBonusArtifactId)) {
@@ -241,7 +277,7 @@ export function PuzzleScreen({ navigation, route }: Props) {
       ) : allFound ? (
         <View style={styles.endState}>
           <AppButton
-            title="Complete Trial"
+            title="Claim the Trial"
             onPress={() =>
               navigation.replace('Reward', { levelId: level.id, entityId: level.entityId })
             }
@@ -254,54 +290,140 @@ export function PuzzleScreen({ navigation, route }: Props) {
               <AppButton
                 title={
                   boostAvailable
-                    ? `${boostCompanion.name}'s Help`
-                    : `${boostCompanion.name}'s Help (used)`
+                    ? `${boostCompanion.name}'s Aid`
+                    : `${boostCompanion.name}'s Aid (spent)`
                 }
                 variant="ghost"
                 disabled={!boostAvailable}
-                style={[styles.actionBtn, !boostAvailable && styles.actionDisabled]}
+                style={[
+                  styles.actionBtn,
+                  styles.actionFantasy,
+                  !boostAvailable && styles.actionDisabled,
+                ]}
                 onPress={onBoost}
               />
             )}
             {puzzleConfig.wheel.shuffleEnabled && (
               <AppButton
-                title="Shuffle"
+                title="Scatter Runes"
                 variant="ghost"
-                style={styles.actionBtn}
+                style={[styles.actionBtn, styles.actionFantasy]}
                 onPress={onShuffle}
               />
             )}
           </View>
-          <LetterWheel letters={wheelLetters} onWord={onWord} onPreview={setPreview} />
+          <View style={styles.wheelFrame}>
+            <AppText variant="small" style={styles.wheelHint}>
+              Trace the runes to spell a word
+            </AppText>
+            <LetterWheel letters={wheelLetters} onWord={onWord} onPreview={setPreview} />
+          </View>
         </View>
       )}
-    </Screen>
+    </>
   );
+
+  if (biomeBackground) {
+    return (
+      <ImageBackground source={biomeBackground} style={styles.background} resizeMode="cover">
+        <View style={styles.scrimTop} pointerEvents="none" />
+        <View style={styles.scrim} pointerEvents="none" />
+        <Screen transparent style={styles.container}>
+          {puzzleBody}
+        </Screen>
+      </ImageBackground>
+    );
+  }
+
+  return <Screen style={styles.container}>{puzzleBody}</Screen>;
 }
 
 const styles = StyleSheet.create({
-  container: { justifyContent: 'space-between' },
-  header: {
+  background: { flex: 1, width: '100%', height: '100%' },
+  scrim: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: 'rgba(14, 11, 20, 0.42)',
+  },
+  scrimTop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 120,
+    backgroundColor: 'rgba(14, 11, 20, 0.55)',
+  },
+  container: { justifyContent: 'space-between', paddingTop: spacing.sm },
+  hud: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  hudPanel: {
+    flex: 1,
+    backgroundColor: colors.puzzleGlass,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.puzzleGoldBorder,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+  },
+  hudPanelUrgent: {
+    borderColor: colors.danger,
+    backgroundColor: 'rgba(60, 16, 16, 0.55)',
+  },
+  hudLabel: {
+    color: colors.accentSoft,
+    textTransform: 'uppercase',
+    letterSpacing: 1.2,
+    fontSize: 11,
+    marginBottom: 2,
+  },
+  hudValue: { color: colors.text },
+  hudMuted: { color: colors.textMuted },
+  gridArea: { flex: 1, justifyContent: 'center', paddingVertical: spacing.sm },
+  gridFrame: {
+    alignSelf: 'center',
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.puzzleGoldBorder,
+    backgroundColor: colors.puzzleGlassStrong,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.35,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  gridFrameAccent: {
+    height: 3,
+    backgroundColor: colors.accent,
+    opacity: 0.65,
+  },
+  gridFrameInner: {
+    padding: spacing.lg,
     alignItems: 'center',
   },
-  gridArea: { flex: 1, justifyContent: 'center' },
   previewRow: { alignItems: 'center', marginBottom: spacing.sm },
   previewPill: {
-    minWidth: 140,
+    minWidth: 160,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.lg,
-    borderRadius: radius.pill,
-    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    backgroundColor: colors.puzzleParchment,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.puzzleGoldBorder,
     alignItems: 'center',
   },
-  previewGood: { borderColor: colors.success },
-  previewBad: { borderColor: colors.danger },
-  previewText: { letterSpacing: 2 },
-  wheelArea: { paddingHorizontal: spacing.xl, paddingBottom: spacing.md, gap: spacing.sm },
+  previewGood: {
+    borderColor: colors.success,
+    backgroundColor: 'rgba(20, 40, 28, 0.75)',
+  },
+  previewBad: {
+    borderColor: colors.danger,
+    backgroundColor: 'rgba(48, 16, 16, 0.75)',
+  },
+  previewText: { letterSpacing: 3, color: colors.accentSoft },
+  wheelArea: { paddingHorizontal: spacing.md, paddingBottom: spacing.md, gap: spacing.sm },
   wheelActions: {
     flexDirection: 'row',
     justifyContent: 'center',
@@ -309,6 +431,25 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   actionBtn: { flexGrow: 1, minWidth: 120 },
+  actionFantasy: {
+    backgroundColor: colors.puzzleGlass,
+    borderColor: colors.puzzleGoldBorder,
+  },
   actionDisabled: { opacity: 0.4 },
+  wheelFrame: {
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.puzzleGoldBorder,
+    backgroundColor: colors.puzzleGlass,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.xs,
+    paddingHorizontal: spacing.sm,
+  },
+  wheelHint: {
+    textAlign: 'center',
+    color: colors.textMuted,
+    fontStyle: 'italic',
+    marginBottom: spacing.xs,
+  },
   endState: { gap: spacing.md, paddingBottom: spacing.md, alignItems: 'stretch' },
 });

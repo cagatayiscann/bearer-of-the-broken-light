@@ -39,7 +39,15 @@ export function RootNavigator() {
       />
       <Stack.Screen name="Map" component={MapScreen} options={{ title: 'The Journey' }} />
       <Stack.Screen name="Encounter" component={EncounterScreen} options={{ title: '' }} />
-      <Stack.Screen name="Puzzle" component={PuzzleScreen} options={{ title: 'Puzzle' }} />
+      <Stack.Screen
+        name="Puzzle"
+        component={PuzzleScreen}
+        options={{
+          title: 'Word Trial',
+          headerTransparent: true,
+          contentStyle: { backgroundColor: 'transparent' },
+        }}
+      />
       <Stack.Screen
         name="Reward"
         component={RewardScreen}

@@ -1,8 +1,9 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { Image, ScrollView, StyleSheet, View } from 'react-native';
 
 import type { RootStackParamList } from '../app/navigation';
+import { getEntityPortrait } from '../assets/images';
 import { getEntity } from '../content';
 import { entityProgress } from '../features/map/progression';
 import { useGameStore } from '../store/useGameStore';
@@ -26,10 +27,16 @@ export function EncounterScreen({ navigation, route }: Props) {
   }
 
   const progress = entityProgress(entity, completedLevelIds);
+  const portrait = getEntityPortrait(entity.id);
 
   return (
     <Screen style={styles.container}>
       <View style={styles.top}>
+        {portrait && (
+          <View style={styles.portraitFrame}>
+            <Image source={portrait} style={styles.portrait} resizeMode="cover" />
+          </View>
+        )}
         <AppText variant="title" style={{ color: colors.accentSoft }}>
           {entity.name}
         </AppText>
@@ -91,7 +98,17 @@ export function EncounterScreen({ navigation, route }: Props) {
 
 const styles = StyleSheet.create({
   container: { gap: spacing.lg },
-  top: { marginTop: spacing.md, gap: spacing.md },
+  top: { marginTop: spacing.md, gap: spacing.md, alignItems: 'center' },
+  portraitFrame: {
+    width: 160,
+    height: 160,
+    borderRadius: radius.lg,
+    borderWidth: 2,
+    borderColor: colors.accent,
+    overflow: 'hidden',
+    backgroundColor: colors.surface,
+  },
+  portrait: { width: '100%', height: '100%' },
   dialogue: { fontStyle: 'italic', lineHeight: 24 },
   list: { gap: spacing.sm, paddingBottom: spacing.xl },
   trial: {

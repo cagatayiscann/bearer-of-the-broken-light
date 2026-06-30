@@ -59,7 +59,7 @@ export function GridView({
 
   if (layout.cols === 0 || layout.rows === 0) return null;
 
-  const gap = 4;
+  const gap = 5;
   const tile = Math.floor((maxWidth - gap * (layout.cols - 1)) / layout.cols);
   const size = Math.max(18, Math.min(tile, 52));
 
@@ -123,7 +123,7 @@ function GridCell({
     <Animated.View
       style={[
         styles.cell,
-        { width: size, height: size },
+        { width: size, height: size, borderRadius: size * 0.18 },
         isRevealed && styles.cellRevealed,
         isHint && styles.cellHint,
         animStyle,
@@ -131,7 +131,7 @@ function GridCell({
     >
       {(isRevealed || isHint) && (
         <AppText
-          style={[styles.letter, isHint && styles.letterHint, { fontSize: size * 0.5 }]}
+          style={[styles.letter, isHint && styles.letterHint, { fontSize: size * 0.48 }]}
         >
           {letter}
         </AppText>
@@ -144,20 +144,25 @@ const styles = StyleSheet.create({
   grid: { alignItems: 'center', justifyContent: 'center' },
   row: { flexDirection: 'row' },
   cell: {
-    marginVertical: 2,
-    borderRadius: radius.sm,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
+    marginVertical: 1,
+    backgroundColor: colors.puzzleCellEmpty,
+    borderWidth: 1.5,
+    borderColor: colors.puzzleGoldBorder,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: colors.accent,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
   },
   cellRevealed: {
-    backgroundColor: colors.bgElevated,
+    backgroundColor: colors.puzzleCellRevealed,
     borderColor: colors.accent,
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
   },
   cellHint: {
-    backgroundColor: colors.bgElevated,
+    backgroundColor: colors.puzzleCellRevealed,
     borderColor: colors.textMuted,
     borderStyle: 'dashed',
   },
