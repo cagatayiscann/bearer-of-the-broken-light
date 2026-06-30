@@ -8,6 +8,7 @@ export const biomeBackgrounds: Record<string, ImageSourcePropType> = {
 /** Entity encounter portraits keyed by Entity id. */
 export const entityPortraits: Record<string, ImageSourcePropType> = {
   'grizz-goblin': require('../../assets/entities/grizz-goblin.png'),
+  'whisper-wisp': require('../../assets/entities/whisper-wisp.png'),
 };
 
 export function getBiomeBackground(themeId: string): ImageSourcePropType | undefined {
