@@ -6,6 +6,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { RootNavigator } from './src/app/navigation';
+import { syncMapReveals } from './src/features/map/syncMapReveals';
 import { useGameStore } from './src/store/useGameStore';
 import { colors } from './src/ui/theme';
 
@@ -27,6 +28,7 @@ export default function App() {
   React.useEffect(() => {
     const { applyOfflineDecay, markClosed } = useGameStore.getState();
     applyOfflineDecay();
+    syncMapReveals();
 
     const onChange = (state: AppStateStatus) => {
       if (state === 'active') useGameStore.getState().applyOfflineDecay();

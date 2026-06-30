@@ -4,7 +4,9 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 
 import type { RootStackParamList } from '../app/navigation';
 import { entities, themes } from '../content';
-import { completedCount, entityLevelSequence } from '../features/map/progression';
+import { buildMapNodes, isThemeUnlocked, nodeVisualState } from '../features/map/fog';
+import { MapNodeCard } from '../features/map/components/MapNodeCard';
+import { syncMapReveals } from '../features/map/syncMapReveals';
 import { FatigueBar } from '../features/monetization/components/FatigueBar';
 import { monetizationConfig } from '../features/monetization/config';
 import { useGameStore } from '../store/useGameStore';
@@ -15,18 +17,20 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Map'>;
 
 export function MapScreen({ navigation }: Props) {
   const completedLevelIds = useGameStore((s) => s.completedLevelIds);
+  const revealedNodeIds = useGameStore((s) => s.revealedNodeIds);
   const fatigue = useGameStore((s) => s.fatigue);
 
+  React.useEffect(() => {
+    syncMapReveals();
+  }, [completedLevelIds]);
+
   const showNudge = fatigue >= monetizationConfig.palantir.nudgeThreshold;
+  const mapNodes = buildMapNodes(themes, entities);
 
   return (
     <Screen>
       <View style={styles.fatigueStrip}>
-        <FatigueBar
-          fatigue={fatigue}
-          compact
-          onPress={() => navigation.navigate('Palantir')}
-        />
+        <FatigueBar fatigue={fatigue} compact onPress={() => navigation.navigate('Palantir')} />
       </View>
 
       {showNudge && (
@@ -43,38 +47,56 @@ export function MapScreen({ navigation }: Props) {
       )}
 
       <ScrollView contentContainerStyle={styles.list}>
-        {themes.map((theme) => (
-          <View key={theme.id} style={styles.themeBlock}>
-            <AppText variant="heading" style={{ color: colors.accentSoft }}>
-              {theme.name}
-            </AppText>
-            {theme.entityIds.map((entityId) => {
-              const entity = entities.find((e) => e.id === entityId);
-              if (!entity) return null;
-              const total = entityLevelSequence(entity).length;
-              const done = completedCount(entity, completedLevelIds);
-              const allDone = done >= total;
-              return (
-                <View key={entity.id} style={styles.node}>
-                  <View style={{ flex: 1 }}>
-                    <AppText>{entity.name}</AppText>
-                    <AppText
-                      variant="small"
-                      style={{ color: allDone ? colors.success : colors.textMuted }}
-                    >
-                      {allDone ? 'All trials complete' : `${done}/${total} trials`}
+        {[...themes]
+          .sort((a, b) => a.order - b.order)
+          .map((theme) => {
+            const themeUnlocked = isThemeUnlocked(
+              theme,
+              themes,
+              entities,
+              completedLevelIds,
+            );
+            const themeNodes = mapNodes.filter((n) => n.themeId === theme.id);
+
+            return (
+              <View key={theme.id} style={styles.themeBlock}>
+                <AppText variant="heading" style={{ color: colors.accentSoft }}>
+                  {themeUnlocked ? theme.name : `${theme.name} (locked)`}
+                </AppText>
+                {!themeUnlocked ? (
+                  <View style={styles.themeFog}>
+                    <AppText variant="small" muted>
+                      Complete the region before to unveil this part of the map.
                     </AppText>
                   </View>
-                  <AppButton
-                    title={done > 0 ? 'Continue' : 'Approach'}
-                    variant={allDone ? 'ghost' : 'primary'}
-                    onPress={() => navigation.navigate('Encounter', { entityId: entity.id })}
-                  />
-                </View>
-              );
-            })}
-          </View>
-        ))}
+                ) : (
+                  themeNodes.map((node, idx) => {
+                    const entity = entities.find((e) => e.id === node.entityId);
+                    if (!entity) return null;
+                    const state = nodeVisualState(
+                      node,
+                      revealedNodeIds,
+                      entity,
+                      completedLevelIds,
+                    );
+                    return (
+                      <MapNodeCard
+                        key={node.id}
+                        node={node}
+                        entity={entity}
+                        state={state}
+                        completedLevelIds={completedLevelIds}
+                        onApproach={(entityId) =>
+                          navigation.navigate('Encounter', { entityId })
+                        }
+                        showConnector={idx < themeNodes.length - 1}
+                      />
+                    );
+                  })
+                )}
+              </View>
+            );
+          })}
       </ScrollView>
     </Screen>
   );
@@ -102,14 +124,11 @@ const styles = StyleSheet.create({
   },
   list: { gap: spacing.lg, paddingBottom: spacing.xl },
   themeBlock: { gap: spacing.sm },
-  node: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    backgroundColor: colors.surface,
+  themeFog: {
+    padding: spacing.md,
     borderRadius: radius.md,
+    backgroundColor: colors.fog,
     borderWidth: 1,
     borderColor: colors.border,
-    padding: spacing.md,
   },
 });

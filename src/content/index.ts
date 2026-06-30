@@ -10,7 +10,7 @@ export const themes: Theme[] = [
     id: 'whispering-wood',
     name: 'The Whispering Wood',
     order: 0,
-    entityIds: ['grizz-goblin'],
+    entityIds: ['grizz-goblin', 'whisper-wisp'],
   },
 ];
 
@@ -26,6 +26,15 @@ export const entities: Entity[] = [
     // Grizz is the starter companion (GAME_DESIGN.md §8), not a boss reward here.
     dialogueId: 'grizz-intro',
   },
+  {
+    id: 'whisper-wisp',
+    themeId: 'whispering-wood',
+    name: 'Whisper Wisp',
+    bossLevelId: 'ww-wisp-boss',
+    levelIds: ['ww-wisp-1'],
+    twist: 'darkness',
+    dialogueId: 'wisp-intro',
+  },
 ];
 
 export const levels: Level[] = [
@@ -37,8 +46,16 @@ export const levels: Level[] = [
     // Gentle first trial: a single 4-letter pool (R,O,O,T) with short sub-words.
     words: ['ROOT', 'ROT', 'TOO'],
   },
-  { id: 'ww-grizz-1', entityId: 'grizz-goblin', isBoss: false, words: ['LEAF', 'FERN', 'FEAR'] },
+  { id: 'ww-grizz-1', entityId: 'grizz-goblin', isBoss: false, words: ['LEAF', 'FARE', 'FEAR'] },
   { id: 'ww-grizz-2', entityId: 'grizz-goblin', isBoss: false, words: ['VINE', 'NEVI', 'VEIN'] },
+  {
+    id: 'ww-wisp-boss',
+    entityId: 'whisper-wisp',
+    isBoss: true,
+    twist: 'darkness',
+    words: ['MIST', 'STIR', 'TRIM'],
+  },
+  { id: 'ww-wisp-1', entityId: 'whisper-wisp', isBoss: false, words: ['WISP', 'SPIN'] },
 ];
 
 export const artifacts: Artifact[] = [

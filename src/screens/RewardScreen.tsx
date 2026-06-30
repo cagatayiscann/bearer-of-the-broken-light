@@ -5,6 +5,7 @@ import { StyleSheet, View } from 'react-native';
 import type { RootStackParamList } from '../app/navigation';
 import { getArtifact, getCompanion, getEntity, getLevel } from '../content';
 import { entityLevelSequence, nextLevelId } from '../features/map/progression';
+import { syncMapReveals } from '../features/map/syncMapReveals';
 import { FATIGUE_PER_LEVEL } from '../store/slices/fatigueSlice';
 import { useGameStore } from '../store/useGameStore';
 import { AppButton, AppText, Screen } from '../ui/components';
@@ -29,6 +30,7 @@ export function RewardScreen({ navigation, route }: Props) {
     completeLevel(levelId);
     addCoins(10);
     addFatigue(FATIGUE_PER_LEVEL);
+    syncMapReveals();
     if (level?.isBoss && entity) {
       if (entity.artifactId) grantArtifact(entity.artifactId);
       if (entity.companionId) {
