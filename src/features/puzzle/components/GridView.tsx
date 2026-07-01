@@ -1,6 +1,7 @@
 import React from 'react';
 import {
   type GestureResponderEvent,
+  Pressable,
   StyleSheet,
   View,
 } from 'react-native';
@@ -15,7 +16,7 @@ import { AppText } from '../../../ui/components';
 import { colors } from '../../../ui/theme';
 import { puzzleConfig } from '../config';
 import { keyOf, revealedCellKeys, type GridLayout } from '../engine/layout';
-import { cellAtPoint, shouldShowLetter } from '../twists/darkness';
+import { cellAtPoint } from '../twists/darkness';
 
 const GAP = 5;
 const CELL_MARGIN_Y = 1;
@@ -72,6 +73,46 @@ export function GridView({
   const prevRevealed = React.useRef<Set<string>>(new Set());
   const [pulsing, setPulsing] = React.useState<Set<string>>(() => new Set());
 
+  const metrics = React.useMemo(
+    () => (layout.cols > 0 && layout.rows > 0 ? gridMetrics(layout, maxWidth) : null),
+    [layout, maxWidth],
+  );
+
+  const brushAt = React.useCallback(
+    (x: number, y: number) => {
+      if (!metrics) return;
+      const key = cellAtPoint(layout, occupiedKeys, x, y, metrics.touch);
+      if (!key) return;
+      setLitCells((prev) => {
+        if (prev.has(key)) return prev;
+        const next = new Set(prev);
+        next.add(key);
+        return next;
+      });
+    },
+    [layout, occupiedKeys, metrics],
+  );
+
+  const clearBrush = React.useCallback(() => setLitCells(new Set()), []);
+
+  const lightCell = React.useCallback((key: string) => {
+    setLitCells((prev) => {
+      if (prev.has(key)) return prev;
+      const next = new Set(prev);
+      next.add(key);
+      return next;
+    });
+  }, []);
+
+  const dimCell = React.useCallback((key: string) => {
+    setLitCells((prev) => {
+      if (!prev.has(key)) return prev;
+      const next = new Set(prev);
+      next.delete(key);
+      return next;
+    });
+  }, []);
+
   React.useEffect(() => {
     const fresh = new Set<string>();
     for (const k of revealed) {
@@ -88,37 +129,21 @@ export function GridView({
     setLitCells(new Set());
   }, [layout, darkness]);
 
-  if (layout.cols === 0 || layout.rows === 0) return null;
-
-  const { cellSize: size, width: gridWidth, height: gridHeight, touch } = gridMetrics(
-    layout,
-    maxWidth,
-  );
-
-  const brushAt = React.useCallback(
-    (x: number, y: number) => {
-      const key = cellAtPoint(layout, occupiedKeys, x, y, touch);
-      if (!key) return;
-      setLitCells((prev) => {
-        if (prev.has(key)) return prev;
-        const next = new Set(prev);
-        next.add(key);
-        return next;
-      });
+  const onTouch = React.useCallback(
+    (e: GestureResponderEvent) => {
+      brushAt(e.nativeEvent.locationX, e.nativeEvent.locationY);
     },
-    [layout, occupiedKeys, touch],
+    [brushAt],
   );
 
-  const clearBrush = React.useCallback(() => setLitCells(new Set()), []);
+  if (!metrics) return null;
 
-  const onTouch = (e: GestureResponderEvent) => {
-    brushAt(e.nativeEvent.locationX, e.nativeEvent.locationY);
-  };
+  const { cellSize: size, width: gridWidth, height: gridHeight } = metrics;
 
   const gridBody = (
     <>
       {Array.from({ length: layout.rows }).map((_, row) => (
-        <View key={row} style={[styles.row, { gap: GAP }]}>
+        <View key={row} style={[styles.row, { gap: GAP }]} pointerEvents="box-none">
           {Array.from({ length: layout.cols }).map((_, col) => {
             const cellKey = keyOf(row, col);
             const letter = cellLetters.get(cellKey);
@@ -129,25 +154,39 @@ export function GridView({
             const isHint = !isRevealed && hinted.has(cellKey);
             const isLit = litCells.has(cellKey);
             const isShrouded = !!darkness && !isRevealed && !isHint && !isLit;
-            const showLetter = shouldShowLetter({
-              darkness: !!darkness,
-              isRevealed,
-              isHint,
-              isLit,
-            });
+
+            const cell = (pressed = false) => {
+              const lit = isLit || pressed;
+              const shrouded = !!darkness && !isRevealed && !isHint && !lit;
+              const showLetter = isRevealed || isHint || (!!darkness && lit);
+              return (
+                <GridCell
+                  size={size}
+                  letter={letter}
+                  showLetter={showLetter}
+                  isRevealed={isRevealed}
+                  isHint={isHint}
+                  isLit={lit}
+                  isShrouded={shrouded}
+                  darkness={!!darkness}
+                  pulse={pulsing.has(cellKey)}
+                />
+              );
+            };
+
+            if (!isShrouded) {
+              return <View key={col}>{cell()}</View>;
+            }
+
             return (
-              <GridCell
+              <Pressable
                 key={col}
-                size={size}
-                letter={letter}
-                showLetter={showLetter}
-                isRevealed={isRevealed}
-                isHint={isHint}
-                isLit={isLit}
-                isShrouded={isShrouded}
-                darkness={!!darkness}
-                pulse={pulsing.has(cellKey)}
-              />
+                onPressIn={() => lightCell(cellKey)}
+                onPressOut={() => dimCell(cellKey)}
+                style={({ pressed }) => [{ width: size, height: size + CELL_MARGIN_Y * 2 }]}
+              >
+                {({ pressed }) => cell(pressed)}
+              </Pressable>
             );
           })}
         </View>
@@ -162,14 +201,15 @@ export function GridView({
   return (
     <View
       style={[styles.grid, styles.gridTouch, { width: gridWidth, height: gridHeight }]}
-      onStartShouldSetResponder={() => true}
-      onMoveShouldSetResponder={() => true}
+      onStartShouldSetResponderCapture={() => true}
+      onMoveShouldSetResponderCapture={() => true}
       onResponderGrant={onTouch}
       onResponderMove={onTouch}
       onResponderRelease={clearBrush}
       onResponderTerminate={clearBrush}
     >
       {gridBody}
+      <View style={[styles.gridMist, { width: gridWidth, height: gridHeight }]} pointerEvents="none" />
     </View>
   );
 }
@@ -224,7 +264,7 @@ function GridCell({
         animStyle,
       ]}
     >
-      {showLetter && (
+      {showLetter && !isShrouded && (
         <AppText
           style={[
             styles.letter,
@@ -238,7 +278,8 @@ function GridCell({
       )}
       {isShrouded && (
         <View style={[styles.shroudVeil, { borderRadius: radius }]}>
-          <AppText style={[styles.shroudMark, { fontSize: size * 0.34 }]}>∿</AppText>
+          <View style={[styles.shroudFog, { borderRadius: radius }]} />
+          <AppText style={[styles.shroudMark, { fontSize: size * 0.38 }]}>?</AppText>
         </View>
       )}
     </Animated.View>
@@ -248,6 +289,13 @@ function GridCell({
 const styles = StyleSheet.create({
   grid: { alignItems: 'center', justifyContent: 'center' },
   gridTouch: { alignSelf: 'center' },
+  gridMist: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    backgroundColor: 'rgba(40, 28, 60, 0.18)',
+    borderRadius: 12,
+  },
   row: { flexDirection: 'row' },
   cell: {
     marginVertical: CELL_MARGIN_Y,
@@ -255,7 +303,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     overflow: 'hidden',
   },
-  /** Normal trials: visible empty slots waiting for a word. */
   cellOpen: {
     backgroundColor: 'rgba(8, 5, 14, 0.32)',
     borderWidth: 1.5,
@@ -265,34 +312,38 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.35,
     shadowRadius: 4,
   },
-  /** Darkness: thick mist hides the letter entirely. */
   cellShrouded: {
-    backgroundColor: 'rgba(12, 8, 22, 0.92)',
+    backgroundColor: '#06040c',
     borderWidth: 2,
-    borderColor: 'rgba(120, 100, 160, 0.45)',
-    shadowColor: 'rgba(80, 60, 120, 0.6)',
+    borderColor: 'rgba(130, 110, 170, 0.55)',
+    shadowColor: 'rgba(60, 40, 90, 0.8)',
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: 10,
+    shadowOpacity: 0.7,
+    shadowRadius: 12,
+    elevation: 6,
   },
   shroudVeil: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(100, 80, 140, 0.42)',
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: '#0c0816',
+  },
+  shroudFog: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: 'rgba(120, 95, 160, 0.55)',
   },
   shroudMark: {
-    color: 'rgba(200, 180, 230, 0.55)',
-    fontWeight: '700',
+    color: 'rgba(210, 190, 240, 0.35)',
+    fontWeight: '800',
   },
   cellLit: {
-    backgroundColor: 'rgba(28, 22, 44, 0.9)',
+    backgroundColor: 'rgba(28, 22, 44, 0.95)',
     borderWidth: 2,
-    borderColor: 'rgba(230, 195, 74, 0.7)',
+    borderColor: 'rgba(230, 195, 74, 0.85)',
     shadowColor: colors.accentSoft,
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.55,
-    shadowRadius: 12,
+    shadowOpacity: 0.65,
+    shadowRadius: 14,
   },
   cellRevealed: {
     backgroundColor: 'rgba(22, 16, 30, 0.72)',

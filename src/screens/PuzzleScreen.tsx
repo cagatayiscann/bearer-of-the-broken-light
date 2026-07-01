@@ -17,6 +17,7 @@ import { LetterWheel } from '../features/puzzle/components/LetterWheel';
 import { deriveWheel, shuffleWheel, classifyGuess } from '../features/puzzle/engine/wheel';
 import { generateLayout } from '../features/puzzle/engine/layout';
 import { pickHintCells } from '../features/puzzle/engine/hints';
+import { resolveLevelTwist } from '../features/puzzle/twists/resolveTwist';
 import { normalizeWord } from '../features/puzzle/engine/wordGrid';
 import { useGameStore } from '../store/useGameStore';
 import { AppButton, AppText, Screen } from '../ui/components';
@@ -56,8 +57,9 @@ export function PuzzleScreen({ navigation, route }: Props) {
     transform: [{ scale: previewScale.value }],
   }));
 
-  const isTimed = level?.twist === 'timer';
-  const isDarkness = level?.twist === 'darkness';
+  const activeTwist = level && entity ? resolveLevelTwist(level, entity) : level?.twist;
+  const isTimed = activeTwist === 'timer';
+  const isDarkness = activeTwist === 'darkness';
   const layout = React.useMemo(() => (level ? generateLayout(level.words) : null), [level]);
   const timerUrgent = isTimed && timeRemaining !== null && timeRemaining <= 10;
 
