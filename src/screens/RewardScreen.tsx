@@ -3,7 +3,7 @@ import React from 'react';
 import { Image, ImageBackground, StyleSheet, View } from 'react-native';
 
 import type { RootStackParamList } from '../app/navigation';
-import { getBiomeBackground, getEntityPortrait } from '../assets/images';
+import { getEntityPortrait, getPuzzleBackground } from '../assets/images';
 import { getArtifact, getCompanion, getEntity, getLevel, getTheme } from '../content';
 import { entityLevelSequence, nextLevelId } from '../features/map/progression';
 import { syncMapReveals } from '../features/map/syncMapReveals';
@@ -19,7 +19,8 @@ export function RewardScreen({ navigation, route }: Props) {
   const level = getLevel(levelId);
   const entity = getEntity(entityId);
   const theme = entity ? getTheme(entity.themeId) : undefined;
-  const biomeBackground = theme ? getBiomeBackground(theme.id) : undefined;
+  const puzzleBackground =
+    entity && theme ? getPuzzleBackground(entity.id, theme.id) : undefined;
   const portrait = entity ? getEntityPortrait(entity.id) : undefined;
 
   const completeLevel = useGameStore((s) => s.completeLevel);
@@ -107,10 +108,10 @@ export function RewardScreen({ navigation, route }: Props) {
     </>
   );
 
-  if (biomeBackground) {
+  if (puzzleBackground) {
     return (
-      <ImageBackground source={biomeBackground} style={styles.background} resizeMode="cover">
-        <View style={styles.scrim} pointerEvents="none" />
+      <ImageBackground source={puzzleBackground} style={styles.background} resizeMode="cover">
+        <View style={[styles.scrim, level?.twist === 'darkness' && styles.scrimDark]} pointerEvents="none" />
         <Screen transparent style={styles.container}>
           {body}
         </Screen>
@@ -132,6 +133,9 @@ const styles = StyleSheet.create({
   scrim: {
     ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(14, 11, 20, 0.55)',
+  },
+  scrimDark: {
+    backgroundColor: 'rgba(8, 6, 18, 0.62)',
   },
   container: { justifyContent: 'space-between' },
   body: {

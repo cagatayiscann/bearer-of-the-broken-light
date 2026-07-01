@@ -3,7 +3,7 @@ import React from 'react';
 import { Image, ImageBackground, ScrollView, StyleSheet, View } from 'react-native';
 
 import type { RootStackParamList } from '../app/navigation';
-import { getBiomeBackground, getEntityPortrait } from '../assets/images';
+import { getEntityPortrait, getPuzzleBackground } from '../assets/images';
 import { getEntity, getTheme } from '../content';
 import { getEntityDialogue } from '../content/dialogue';
 import { entityProgress } from '../features/map/progression';
@@ -33,7 +33,7 @@ export function EncounterScreen({ navigation, route }: Props) {
   }
 
   const theme = getTheme(entity.themeId);
-  const biomeBackground = theme ? getBiomeBackground(theme.id) : undefined;
+  const puzzleBackground = getPuzzleBackground(entity.id, entity.themeId);
   const progress = entityProgress(entity, completedLevelIds);
   const portrait = getEntityPortrait(entity.id);
   const dialogue =
@@ -106,10 +106,10 @@ export function EncounterScreen({ navigation, route }: Props) {
     </>
   );
 
-  if (biomeBackground) {
+  if (puzzleBackground) {
     return (
-      <ImageBackground source={biomeBackground} style={styles.background} resizeMode="cover">
-        <View style={styles.scrim} pointerEvents="none" />
+      <ImageBackground source={puzzleBackground} style={styles.background} resizeMode="cover">
+        <View style={[styles.scrim, entity.twist === 'darkness' && styles.scrimDark]} pointerEvents="none" />
         <Screen transparent style={styles.container}>
           {body}
         </Screen>
@@ -131,6 +131,9 @@ const styles = StyleSheet.create({
   scrim: {
     ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(14, 11, 20, 0.5)',
+  },
+  scrimDark: {
+    backgroundColor: 'rgba(8, 6, 18, 0.58)',
   },
   container: { gap: spacing.lg },
   top: { marginTop: spacing.sm, gap: spacing.sm, alignItems: 'center', paddingHorizontal: spacing.sm },

@@ -9,7 +9,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import type { RootStackParamList } from '../app/navigation';
-import { getBiomeBackground } from '../assets/images';
+import { getPuzzleBackground } from '../assets/images';
 import { getCompanion, getEntity, getLevel, getTheme } from '../content';
 import { puzzleConfig } from '../features/puzzle/config';
 import { GridView } from '../features/puzzle/components/GridView';
@@ -30,7 +30,8 @@ export function PuzzleScreen({ navigation, route }: Props) {
   const level = getLevel(route.params.levelId);
   const entity = level ? getEntity(level.entityId) : undefined;
   const theme = entity ? getTheme(entity.themeId) : undefined;
-  const biomeBackground = theme ? getBiomeBackground(theme.id) : undefined;
+  const puzzleBackground =
+    entity && theme ? getPuzzleBackground(entity.id, theme.id) : undefined;
   const { width } = useWindowDimensions();
 
   const foundWords = useGameStore((s) => s.foundWords);
@@ -334,11 +335,11 @@ export function PuzzleScreen({ navigation, route }: Props) {
     </>
   );
 
-  if (biomeBackground) {
+  if (puzzleBackground) {
     return (
-      <ImageBackground source={biomeBackground} style={styles.background} resizeMode="cover">
+      <ImageBackground source={puzzleBackground} style={styles.background} resizeMode="cover">
+        <View style={[styles.scrim, isDarkness && styles.scrimDark]} pointerEvents="none" />
         <View style={styles.scrimTop} pointerEvents="none" />
-        <View style={styles.scrim} pointerEvents="none" />
         <Screen transparent style={styles.container}>
           {puzzleBody}
         </Screen>
@@ -354,6 +355,9 @@ const styles = StyleSheet.create({
   scrim: {
     ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(14, 11, 20, 0.42)',
+  },
+  scrimDark: {
+    backgroundColor: 'rgba(8, 6, 18, 0.52)',
   },
   scrimTop: {
     position: 'absolute',
